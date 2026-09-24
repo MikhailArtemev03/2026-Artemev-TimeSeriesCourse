@@ -19,20 +19,38 @@ class Image2TimeSeries:
         self.angle_step: int = angle_step
 
 
+
     def _img_preprocess(self, img: np.ndarray) -> np.ndarray:
         """
         Preprocess the raw image: convert to grayscale, inverse, blur slightly, and threshold it
-        
+
         Parameters
         ----------
         img: raw image
-        
+
         Returns
         -------
         prep_img: image after preprocessing
         """
 
         # INSERT YOUR CODE
+
+        #Преобразование в оттенки серого
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        #Инверсия цвета
+        inverted = cv2.bitwise_not(gray)
+
+        #Размытие для удаления шума
+        blurred = cv2.GaussianBlur(inverted, (5, 5), 0)
+
+        #Бинаризация изображения
+        _, prep_img = cv2.threshold(
+            blurred,
+            0,
+            255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
 
         return prep_img
 

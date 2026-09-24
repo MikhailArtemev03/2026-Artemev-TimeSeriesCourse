@@ -50,6 +50,7 @@ class TimeSeriesKNN:
         return self
 
 
+
     def _distance(self, x_train: np.ndarray, x_test: np.ndarray) -> float:
         """
         Compute distance between the train and test samples
@@ -68,7 +69,28 @@ class TimeSeriesKNN:
 
         # INSERT YOUR CODE
 
+        if self.metric == 'euclidean':
+            if self.metric_params['normalize']:
+                dist = norm_ED_distance(x_train, x_test)
+            else:
+                dist = ED_distance(x_train, x_test)
+
+        elif self.metric == 'dtw':
+            if self.metric_params['normalize']:
+                x_train = z_normalize(x_train)
+                x_test = z_normalize(x_test)
+
+            dist = DTW_distance(
+                x_train,
+                x_test,
+                r=self.metric_params.get('r', 1)
+            )
+
+        else:
+            raise ValueError("Unknown distance metric")
+
         return dist
+
 
 
     def _find_neighbors(self, x_test: np.ndarray) -> list[tuple[float, int]]:
@@ -88,7 +110,16 @@ class TimeSeriesKNN:
 
         # INSERT YOUR CODE
 
+        for x_train, label in zip(self.X_train, self.Y_train):
+            dist = self._distance(x_train, x_test)
+            neighbors.append((dist, int(label)))
+
+        neighbors.sort(key=lambda x: x[0])
+
+        neighbors = neighbors[:self.n_neighbors]
+
         return neighbors
+
 
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
@@ -107,6 +138,22 @@ class TimeSeriesKNN:
         y_pred = []
 
         # INSERT YOUR CODE
+
+        for x_test in X_test:
+            neighbors = self._find_neighbors(x_test)
+
+            neighbor_labels = [
+                label for distance, label in neighbors
+            ]
+
+            classes, counts = np.unique(
+                neighbor_labels,
+                return_counts=True
+            )
+
+            predicted_class = classes[np.argmax(counts)]
+
+            y_pred.append(predicted_class)
 
         return np.array(y_pred)
 
@@ -132,4 +179,3 @@ def calculate_accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     score = score/len(y_true)
 
     return score
-
