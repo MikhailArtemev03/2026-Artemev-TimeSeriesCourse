@@ -120,15 +120,14 @@ class NaiveBestMatchFinder(BestMatchFinder):
 
     def __init__(self, excl_zone_frac: float = 1, topK: int = 3, is_normalize: bool = True, r: float = 0.05):
         super().__init__(excl_zone_frac, topK, is_normalize, r)
-        """ 
+        """
         Constructor of class NaiveBestMatchFinder
         """
-
 
     def perform(self, ts_data: np.ndarray, query: np.ndarray) -> dict:
         """
         Search subsequences in a time series that most closely match the query using the naive algorithm
-        
+
         Parameters
         ----------
         ts_data: time series
@@ -150,11 +149,31 @@ class NaiveBestMatchFinder(BestMatchFinder):
         bsf = np.inf
 
         bestmatch = {
-            'index' : [],
-            'distance' : []
+            'index': [],
+            'distance': []
         }
-        
+
         # INSERT YOUR CODE
+        if self.is_normalize:
+            query = z_normalize(query)
+
+        for i in range(N):
+            subsequence = ts_data[i]
+
+            if self.is_normalize:
+                subsequence = z_normalize(subsequence)
+
+            dist_profile[i] = DTW_distance(
+                query,
+                subsequence,
+                r=self.r
+            )
+
+        bestmatch = topK_match(
+            dist_profile,
+            excl_zone=excl_zone,
+            topK=self.topK
+        )
 
         return bestmatch
 
