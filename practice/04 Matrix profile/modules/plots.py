@@ -11,7 +11,7 @@ import plotly.express as px
 plotly.offline.init_notebook_mode(connected=True)
 
 
-def plot_ts(ts: np.ndarrray, title: str = 'Input Time Series') -> None:
+def plot_ts(ts: np.ndarray, title: str = 'Input Time Series') -> None:
     """
     Plot the time series
 
