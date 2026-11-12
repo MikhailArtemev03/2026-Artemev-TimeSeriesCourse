@@ -218,7 +218,13 @@ class UCR_DTW(BestMatchFinder):
 
         lb_Kim = 0
         
-        # INSERT YOUR CODE
+        subs1 = np.asarray(subs1, dtype=float)
+        subs2 = np.asarray(subs2, dtype=float)
+
+        lb_Kim = float((subs1[0] - subs2[0]) ** 2)
+
+        if len(subs1) > 1:
+            lb_Kim += float((subs1[-1] - subs2[-1]) ** 2)
 
         return lb_Kim
 
@@ -240,7 +246,32 @@ class UCR_DTW(BestMatchFinder):
 
         lb_Keogh = 0
 
-        # INSERT YOUR CODE
+        from scipy.ndimage import maximum_filter1d, minimum_filter1d
+
+        subs1 = np.asarray(subs1, dtype=float)
+        subs2 = np.asarray(subs2, dtype=float)
+
+        radius = int(r * len(subs1))
+        window_size = 2 * radius + 1
+
+        upper = maximum_filter1d(
+            subs1,
+            size=window_size,
+            mode="nearest"
+        )
+
+        lower = minimum_filter1d(
+            subs1,
+            size=window_size,
+            mode="nearest"
+        )
+
+        deviation = (
+            np.maximum(subs2 - upper, 0.0)
+            + np.minimum(subs2 - lower, 0.0)
+        )
+
+        lb_Keogh = float(np.sum(deviation ** 2))
 
         return lb_Keogh
 
@@ -294,6 +325,68 @@ class UCR_DTW(BestMatchFinder):
             'distance' : []
         }
 
-        # INSERT YOUR CODE
+        self.not_pruned_num = 0
+        self.lb_Kim_num = 0
+        self.lb_KeoghQC_num = 0
+        self.lb_KeoghCQ_num = 0
+
+        if self.is_normalize:
+            query = z_normalize(query)
+            ts_data = np.array([
+                z_normalize(subsequence)
+                for subsequence in ts_data
+            ])
+
+        available = np.ones(N, dtype=bool)
+
+        calculated = np.zeros(N, dtype=bool)
+
+        bestmatch = {
+            'indices': [],
+            'distances': []
+        }
+
+        for _ in range(self.topK):
+            bsf = np.inf
+            best_idx = -1
+
+            for i in np.flatnonzero(available):
+                candidate = ts_data[i]
+
+                if self._LB_Kim(query, candidate) > bsf:
+                    self.lb_Kim_num += 1
+                    continue
+
+                if self._LB_Keogh(query, candidate, self.r) > bsf:
+                    self.lb_KeoghQC_num += 1
+                    continue
+
+                if self._LB_Keogh(candidate, query, self.r) > bsf:
+                    self.lb_KeoghCQ_num += 1
+                    continue
+
+                self.not_pruned_num += 1
+
+                if not calculated[i]:
+                    dist_profile[i] = DTW_distance(
+                        query,
+                        candidate,
+                        r=self.r
+                    )
+                    calculated[i] = True
+
+                if dist_profile[i] < bsf:
+                    bsf = dist_profile[i]
+                    best_idx = int(i)
+
+            if best_idx == -1:
+                break
+
+            bestmatch['indices'].append(best_idx)
+            bestmatch['distances'].append(float(bsf))
+
+            left = max(0, best_idx - excl_zone)
+            right = min(N, best_idx + excl_zone + 1)
+            available[left:right] = False
 
         return bestmatch
